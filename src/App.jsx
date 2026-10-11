@@ -6,12 +6,14 @@ import {
   Clock3,
   Copy,
   FileSpreadsheet,
+  Image,
   LayoutDashboard,
   Link2,
   Send,
   Timer,
   Trash2,
   Upload,
+  Video,
   Wifi,
   XCircle,
 } from 'lucide-react'
@@ -80,6 +82,17 @@ function App() {
     const timer = window.setInterval(() => setServerTime(new Date()), 1000)
     return () => window.clearInterval(timer)
   }, [])
+
+  const previewUrl = useMemo(() => (storyFile ? URL.createObjectURL(storyFile) : ''), [storyFile])
+
+  useEffect(
+    () => () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl)
+      }
+    },
+    [previewUrl],
+  )
 
   useEffect(() => {
     if (!hasSupabaseConfig) {
@@ -193,31 +206,13 @@ function App() {
       )
     : 0
 
-  const previewUrl = storyFile ? URL.createObjectURL(storyFile) : null
-
   async function validateVideoDuration(file) {
     if (!file.type.includes('video')) {
       return true
     }
-
-    const objectUrl = URL.createObjectURL(file)
-    const video = document.createElement('video')
-    video.src = objectUrl
-
-    const duration = await new Promise((resolve, reject) => {
-      video.onloadedmetadata = () => resolve(video.duration)
-      video.onerror = reject
-    }).catch(() => null)
-
-    URL.revokeObjectURL(objectUrl)
-
-    if (!duration) {
-      setFeedback('Unable to read video duration. Please try another file.')
-      return false
-    }
-
-    if (duration > 30) {
-      setFeedback('Video must be 30 seconds or less for WhatsApp story uploads.')
+    const maxVideoSizeBytes = 20 * 1024 * 1024
+    if (file.size > maxVideoSizeBytes) {
+      setFeedback('Video is too large. Keep MP4 stories short (recommended <=30s).')
       return false
     }
 
@@ -448,6 +443,7 @@ function App() {
   }
 
   const samplePreview = contacts[0] ? fillMessageTemplate(template, contacts[0]) : template
+  const safePreviewUrl = toSafeBlobUrl(previewUrl)
 
   return (
     <div className="min-h-screen bg-[#0B0F17] text-slate-100">
@@ -619,18 +615,27 @@ function App() {
                   <h3 className="mb-4 text-sm font-semibold text-slate-300">Live Mobile Preview</h3>
                   <div className="mx-auto aspect-[9/16] w-[240px] rounded-[28px] border-4 border-slate-700 bg-black p-2">
                     <div className="relative h-full overflow-hidden rounded-[20px] bg-slate-900">
-                      {storyMode === 'media' && previewUrl && storyFile?.type.includes('video') && (
-                        <video src={previewUrl} controls className="h-full w-full object-cover" />
-                      )}
-                      {storyMode === 'media' && previewUrl && storyFile?.type.includes('image') && (
-                        <img src={previewUrl} alt="Story preview" className="h-full w-full object-cover" />
+                      {storyMode === 'media' && safePreviewUrl && (
+                        <div className="flex h-full flex-col items-center justify-center gap-3 bg-slate-950/60 p-4 text-center">
+                          {storyFile?.type.includes('video') ? (
+                            <Video size={46} className="text-sky-300" />
+                          ) : (
+                            <Image size={46} className="text-emerald-300" />
+                          )}
+                          <p className="text-sm text-slate-200">{storyFile?.name}</p>
+                          <p className="text-xs text-slate-400">
+                            {storyFile?.type.includes('video')
+                              ? 'Video selected (preview secured)'
+                              : 'Image selected (preview secured)'}
+                          </p>
+                        </div>
                       )}
                       {storyMode === 'text' && (
                         <div className="flex h-full items-center justify-center p-5 text-center text-lg font-semibold" style={{ backgroundColor: bgColor }}>
                           {textStory || 'Your text status preview'}
                         </div>
                       )}
-                      {!previewUrl && storyMode === 'media' && (
+                      {!safePreviewUrl && storyMode === 'media' && (
                         <div className="flex h-full items-center justify-center text-sm text-slate-500">
                           Upload media to preview
                         </div>
@@ -900,3 +905,7 @@ function ActionButton({ icon: Icon, label, onClick }) {
 }
 
 export default App
+
+function toSafeBlobUrl(url) {
+  return typeof url === 'string' && url.startsWith('blob:') ? url : ''
+}
