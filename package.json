@@ -1,0 +1,31 @@
+{
+  "name": "whatsauto-workspace",
+  "version": "1.0.0",
+  "description": "WhatsAuto — Production-Oriented WhatsApp Automation Platform",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=backend\" \"npm run dev --workspace=frontend\"",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:worker": "npm run dev:worker --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "test:backend": "npm test --workspace=backend",
+    "test": "npm run test:backend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  },
+  "keywords": [
+    "whatsapp",
+    "automation",
+    "dashboard",
+    "queue",
+    "scheduler"
+  ],
+  "author": "Mayank Thakkar",
+  "license": "MIT"
+}
